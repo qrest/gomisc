@@ -13,12 +13,12 @@ func ReadConfig(configFilePath string, config interface{}) error {
 	// Open config file
 	file, err := os.Open(configFilePath)
 	if err != nil {
-		return serror.NewStackError(err)
+		return serror.New(err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			log.Println(serror.NewStackError(err))
+			log.Println(serror.New(err))
 		}
 	}(file)
 
@@ -29,7 +29,7 @@ func ReadConfig(configFilePath string, config interface{}) error {
 
 	// Start YAML decoding from file
 	if err := d.Decode(config); err != nil {
-		return serror.NewStackError(err)
+		return serror.New(err)
 	}
 
 	return nil
@@ -39,11 +39,11 @@ func ReadConfig(configFilePath string, config interface{}) error {
 func WriteConfig(filePath string, config interface{}) error {
 	marshalledConfig, err := yaml.Marshal(&config)
 	if err != nil {
-		return serror.NewStackError(err)
+		return serror.New(err)
 	}
 
 	if err := os.WriteFile(filePath, marshalledConfig, 0600); err != nil {
-		return serror.NewStackError(err)
+		return serror.New(err)
 	}
 
 	return nil
@@ -59,13 +59,13 @@ func SetConfigFlags(defaultConfigName string, filePath *string, createConfigFile
 // GetLogfile returns a file accessor for fileName
 func GetLogfile(fileName string) (f *os.File, err error) {
 	if len(fileName) == 0 {
-		err = serror.NewStackErrorStr("name for log file is invalid")
+		err = serror.FromStr("name for log file is invalid")
 		return
 	}
 
 	f, err = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		err = serror.NewStackError(err)
+		err = serror.New(err)
 		return
 	}
 

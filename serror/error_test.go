@@ -18,7 +18,7 @@ func TestGetStack(t *testing.T) {
 			flag:     false,
 		},
 		{
-			err:      NewStackError(errors.New("some string")),
+			err:      New(errors.New("some string")),
 			nilBytes: false,
 			flag:     true,
 		},
@@ -31,7 +31,7 @@ func TestGetStack(t *testing.T) {
 }
 
 func TestNewStackError(t *testing.T) {
-	require.Error(t, NewStackError(errors.New("some string")))
+	require.Error(t, New(errors.New("some string")))
 }
 
 func TestStackError_Error(t *testing.T) {
@@ -40,15 +40,15 @@ func TestStackError_Error(t *testing.T) {
 		want string
 	}{
 		{
-			err:  NewStackError(errors.New("some string")),
+			err:  New(errors.New("some string")),
 			want: "some string",
 		},
 		{
-			err:  NewStackError(errors.New("")),
+			err:  New(errors.New("")),
 			want: "",
 		},
 		{
-			err:  NewStackError(nil),
+			err:  New(nil),
 			want: "",
 		},
 	}
@@ -62,13 +62,13 @@ func TestStackError_Stack(t *testing.T) {
 		err error
 	}{
 		{
-			err: NewStackError(errors.New("some string")),
+			err: New(errors.New("some string")),
 		},
 		{
-			err: NewStackError(errors.New("")),
+			err: New(errors.New("")),
 		},
 		{
-			err: NewStackError(nil),
+			err: New(nil),
 		},
 	}
 	for _, tt := range tests {
@@ -86,15 +86,15 @@ func TestStackError_Unwrap(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			err:     NewStackError(errors.New("some string")),
+			err:     New(errors.New("some string")),
 			wantErr: true,
 		},
 		{
-			err:     NewStackError(errors.New("")),
+			err:     New(errors.New("")),
 			wantErr: true,
 		},
 		{
-			err:     NewStackError(nil),
+			err:     New(nil),
 			wantErr: false,
 		},
 	}
@@ -109,9 +109,9 @@ func TestStackError_Unwrap(t *testing.T) {
 }
 
 func TestNewStackErrorStr(t *testing.T) {
-	require.Error(t, NewStackErrorStr("some string"))
+	require.Error(t, FromStr("some string"))
 }
 
 func TestNewStackErrorf(t *testing.T) {
-	require.Error(t, NewStackErrorf("new error %d", 1))
+	require.Error(t, FromFormat("new error %d", 1))
 }

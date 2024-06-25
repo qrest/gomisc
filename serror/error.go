@@ -12,22 +12,22 @@ type StackError struct {
 	stack []byte
 }
 
-func NewStackError(err error) error {
+func New(err error) error {
 	return StackError{
 		err:   err,
 		stack: debug.Stack(),
 	}
 }
 
-func NewStackErrorStr(errorString string) error {
+func FromStr(errorString string) error {
 	return StackError{
 		err:   errors.New(errorString),
 		stack: debug.Stack(),
 	}
 }
 
-func NewStackErrorf(format string, v ...any) error {
-	return NewStackError(fmt.Errorf(format, v...))
+func FromFormat(format string, v ...any) error {
+	return New(fmt.Errorf(format, v...))
 }
 
 func (se StackError) Error() string {
@@ -55,7 +55,7 @@ func GetStack(err error) ([]byte, bool) {
 	return nil, false
 }
 
-func LogError(l *slog.Logger, err error, v ...any) {
+func Log(l *slog.Logger, err error, v ...any) {
 	var st StackError
 	if errors.As(err, &st) {
 		v = append(v, slog.String("stack", string(st.Stack())))
