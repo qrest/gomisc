@@ -6,7 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestAdapt(t *testing.T) {
@@ -84,4 +87,42 @@ func TestMaxBody5MiB(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	mux.ServeHTTP(recorder, req)
 	mux.ServeHTTP(recorder, req2)
+}
+
+func TestNewCacheFactory(t *testing.T) {
+	countHandlerCalls := atomic.Int64{}
+	testHandler := func() http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			countHandlerCalls.Add(1)
+		})
+	}
+
+	factory, err := NewCacheFactory(nil)
+	require.NoError(t, err)
+
+	mux := http.NewServeMux()
+	mux.Handle("GET /someRoute/{id}", Adapt(testHandler(), factory(time.Minute*5), MaxBody5MiB()))
+
+	recorder := httptest.NewRecorder()
+	const requestCount = int64(100)
+	for range requestCount {
+		req, err := http.NewRequest("GET", "/someRoute/1", nil)
+		require.NoError(t, err)
+		mux.ServeHTTP(recorder, req)
+		recorder.Result()
+	}
+
+	// some of the requests should be cached
+	require.Less(t, countHandlerCalls.Load(), requestCount)
+
+	countHandlerCalls.Store(0)
+
+	for i := range requestCount {
+		req, err := http.NewRequest("GET", "/someRoute/"+strconv.FormatInt(i, 10), nil)
+		require.NoError(t, err)
+		mux.ServeHTTP(recorder, req)
+		recorder.Result()
+	}
+	// none of the request should be cached
+	require.EqualValues(t, requestCount-1, countHandlerCalls.Load())
 }

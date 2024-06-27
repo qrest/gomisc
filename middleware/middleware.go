@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"github.com/dgraph-io/ristretto"
+	"github.com/qrest/gomisc/serror"
 	"io"
 	"log/slog"
 	"net/http"
@@ -61,7 +62,7 @@ func NewCacheFactory(logger *slog.Logger) (func(ttl time.Duration) Adapter, erro
 		BufferItems: 64,      // number of keys per Get buffer.
 	})
 	if err != nil {
-		return nil, err
+		return nil, serror.New(err)
 	}
 
 	return func(ttl time.Duration) Adapter { return newCache(ttl, cache, logger) }, nil
@@ -77,18 +78,23 @@ func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Ad
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// extract body
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "an error occurred", http.StatusInternalServerError)
-				if logger != nil {
-					logger.Error(err.Error())
-				}
+			var body []byte
+			if r.Body != nil {
+				var err error
+				body, err = io.ReadAll(r.Body)
+				if err != nil {
+					http.Error(w, "an error occurred", http.StatusInternalServerError)
+					if logger != nil {
+						logger.Error(err.Error())
+					}
 
-				return
+					return
+				}
+				// reset body, so it can be read by the next handler
+				r.Body = io.NopCloser(bytes.NewBuffer(body))
 			}
-			// reset body, so it can be read by the next handler
-			r.Body = io.NopCloser(bytes.NewBuffer(body))
-			cacheKey := buildKey(r.RequestURI, body)
+
+			cacheKey := buildKey(r.URL.Path, body)
 
 			// try to get request from cache
 			value, found := cache.Get(cacheKey)
@@ -128,7 +134,7 @@ func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Ad
 			// write status code
 			w.WriteHeader(response.statusCode)
 
-			if _, err = w.Write(response.buffer); err != nil {
+			if _, err := w.Write(response.buffer); err != nil {
 				if logger != nil {
 					logger.Error(err.Error())
 				}
