@@ -13,7 +13,7 @@ Call `flag.Parse()` if the command-line options are wanted.
 package main
 
 import (
-    "flag"
+	"flag"
 	"fmt"
 	"github.com/qrest/gomisc/config"
 )
@@ -55,10 +55,3 @@ func main() {
     }
 }
 ```
-
-## Available CLI flags
-
-| Flag         |  Default Value   |                                                       Description |
-|--------------|:----------------:|------------------------------------------------------------------:|
-| createConfig |      false       |                    creates a default config file (default: false) |
-| config       | < empty string > | config file path (default: < the file name passed to GetConfig >) |
