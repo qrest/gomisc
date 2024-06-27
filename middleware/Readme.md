@@ -25,13 +25,13 @@ func someHandler() http.Handler {
 
 func main() {
 	mux := http.NewServeMux()
-	cache, err := mw.NewCache(time.Minute*5, nil)
+	cacheFactory, err := mw.NewCacheFactory(nil)
 	if err != nil {
 		// handle error
 	}
 
-	// use the same cache for multiple routes
-	mux.Handle("/somePath", mw.Adapt(someHandler(), cache, mw.MaxBody5MiB()))
-	mux.Handle("/somePath2", mw.Adapt(someHandler(), cache, mw.MaxBody5MiB()))
+	// call the cache factory to generate a new middleware for each request, so it shares its internal cache
+	mux.Handle("/somePath", mw.Adapt(someHandler(), cacheFactory(time.Minute*5), mw.MaxBody5MiB()))
+	mux.Handle("/somePath2", mw.Adapt(someHandler(), cacheFactory(time.Minute*10), mw.MaxBody5MiB()))
 }
 ```
