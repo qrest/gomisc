@@ -55,11 +55,11 @@ func buildKey(requestURI string, body []byte) string {
 }
 
 // NewCacheFactory returns a middleware factory. Call the factory for each route, so they share the same internal cache.
-func NewCacheFactory(logger *slog.Logger) (func(ttl time.Duration) Adapter, error) {
+func NewCacheFactory(numMiB int64, logger *slog.Logger) (func(ttl time.Duration) Adapter, error) {
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1e7,     // number of keys to track frequency of (10 M).
-		MaxCost:     1 << 30, // maximum cost of cache (1 GB).
-		BufferItems: 64,      // number of keys per Get buffer.
+		NumCounters: 1e7, // number of keys to track frequency of (10 M).
+		MaxCost:     1024 * 1024 * numMiB,
+		BufferItems: 64, // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, serror.New(err)
@@ -119,7 +119,7 @@ func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Ad
 
 				// only insert in cache if no error occurred
 				if response.statusCode < http.StatusBadRequest {
-					cache.SetWithTTL(cacheKey, response, 1, ttl)
+					cache.SetWithTTL(cacheKey, response, int64(40+4*len(response.buffer)), ttl)
 				}
 			}
 
