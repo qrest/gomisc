@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"slices"
+	"strings"
 )
 
 type StackError struct {
@@ -12,17 +14,37 @@ type StackError struct {
 	stack []byte
 }
 
+// getReducedStackTrace returns debug.Stack() with irrelevant bits removed
+func getReducedStackTrace() []byte {
+	var stackLines = strings.Split(string(debug.Stack()), "\n")
+
+	cutStart := 0
+	for i := len(stackLines) - 1; i >= 0; i-- {
+		if strings.Contains(stackLines[i], "serror/error.go") {
+			cutStart = i + 1
+			break
+		}
+	}
+
+	// cutoff everything before the last mention of error.go
+	stackLines = stackLines[cutStart:]
+	// remove empty lines
+	stackLines = slices.DeleteFunc(stackLines, func(d string) bool { return strings.TrimSpace(d) == "" })
+
+	return []byte(strings.Join(stackLines, "\n"))
+}
+
 func New(err error) error {
 	return StackError{
 		err:   err,
-		stack: debug.Stack(),
+		stack: getReducedStackTrace(),
 	}
 }
 
 func FromStr(errorString string) error {
 	return StackError{
 		err:   errors.New(errorString),
-		stack: debug.Stack(),
+		stack: getReducedStackTrace(),
 	}
 }
 

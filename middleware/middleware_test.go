@@ -97,7 +97,7 @@ func TestNewCacheFactory(t *testing.T) {
 		})
 	}
 
-	factory, err := NewCacheFactory(nil)
+	factory, err := NewCacheFactory(10, nil)
 	require.NoError(t, err)
 
 	mux := http.NewServeMux()
