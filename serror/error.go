@@ -10,8 +10,9 @@ import (
 )
 
 type StackError struct {
-	err   error
-	stack []byte
+	err     error
+	stack   []byte
+	context []any
 }
 
 // getReducedStackTrace returns debug.Stack() with irrelevant bits removed
@@ -34,10 +35,26 @@ func getReducedStackTrace() []byte {
 	return []byte(strings.Join(stackLines, "\n"))
 }
 
+func NewWithContext(err error, v ...any) error {
+	return StackError{
+		err:     err,
+		stack:   getReducedStackTrace(),
+		context: v,
+	}
+}
+
 func New(err error) error {
 	return StackError{
 		err:   err,
 		stack: getReducedStackTrace(),
+	}
+}
+
+func FromStrWithContext(errorString string, v ...any) error {
+	return StackError{
+		err:     errors.New(errorString),
+		stack:   getReducedStackTrace(),
+		context: v,
 	}
 }
 
@@ -67,12 +84,20 @@ func (se StackError) Stack() []byte {
 	return se.stack
 }
 
-func GetStack(err error) ([]byte, bool) {
-	var s interface {
-		Stack() []byte
+func AddContext(err error, v ...any) error {
+	var st StackError
+	if errors.As(err, &st) {
+		st.context = append(st.context, v...)
+		return st
 	}
-	if errors.As(err, &s) {
-		return s.Stack(), true
+
+	return err
+}
+
+func GetStack(err error) ([]byte, bool) {
+	var st StackError
+	if errors.As(err, &st) {
+		return st.Stack(), true
 	}
 	return nil, false
 }
@@ -80,8 +105,7 @@ func GetStack(err error) ([]byte, bool) {
 func Log(l *slog.Logger, err error, v ...any) {
 	var st StackError
 	if errors.As(err, &st) {
-		v = append(v, slog.String("stack", string(st.Stack())))
-		l.Warn(err.Error(), v...)
+		l.Warn(err.Error(), slices.Concat(v, st.context, []any{"stack", string(st.Stack())})...)
 	} else {
 		l.Warn(err.Error(), v...)
 	}

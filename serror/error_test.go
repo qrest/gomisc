@@ -3,6 +3,7 @@ package serror
 import (
 	"errors"
 	"github.com/stretchr/testify/require"
+	"log/slog"
 	"testing"
 )
 
@@ -114,4 +115,24 @@ func TestNewStackErrorStr(t *testing.T) {
 
 func TestNewStackErrorf(t *testing.T) {
 	require.Error(t, FromFormat("new error %d", 1))
+}
+
+func TestLog(t *testing.T) {
+	require.NotPanics(t, func() {
+		err := FromStr("test error")
+		Log(slog.Default(), err)
+		Log(slog.Default(), AddContext(err, "testkey", "testval"))
+		Log(slog.Default(), FromStrWithContext("test string", "testkey", "testval"))
+		Log(slog.Default(), FromStrWithContext("test string",
+			"testkey1", "testval1", "testkey2", "testval2"))
+		Log(slog.Default(), errors.New("some string"))
+	})
+}
+
+func TestNewWithContext(t *testing.T) {
+	require.Error(t, NewWithContext(errors.New("some string"), "key", "val"))
+}
+
+func TestFromStrWithContext(t *testing.T) {
+	require.Error(t, FromStrWithContext("some string", "key", "val"))
 }
