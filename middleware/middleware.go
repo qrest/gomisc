@@ -94,7 +94,7 @@ func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Ad
 				r.Body = io.NopCloser(bytes.NewBuffer(body))
 			}
 
-			cacheKey := buildKey(r.URL.Path, body)
+			cacheKey := buildKey(r.URL.Path+"|"+r.URL.RawQuery, body)
 
 			// try to get request from cache
 			value, found := cache.Get(cacheKey)
