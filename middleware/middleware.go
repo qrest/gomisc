@@ -45,6 +45,13 @@ func setCacheHeader(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Set("Cache-Control", "max-age="+strconv.FormatInt(int64(duration/time.Second/3), 10))
 }
 
+// instances of this type are saved in the cache middleware
+type responseItem struct {
+	buffer     []byte
+	header     http.Header
+	statusCode int
+}
+
 // buildKey build a key from the given arguments
 func buildKey(requestURI string, body []byte) string {
 	if len(body) > 0 {
@@ -56,7 +63,7 @@ func buildKey(requestURI string, body []byte) string {
 
 // NewCacheFactory returns a middleware factory. Call the factory for each route, so they share the same internal cache.
 func NewCacheFactory(numMiB int64, logger *slog.Logger) (func(ttl time.Duration) Adapter, error) {
-	cache, err := ristretto.NewCache(&ristretto.Config{
+	cache, err := ristretto.NewCache[string, responseItem](&ristretto.Config[string, responseItem]{
 		NumCounters: 1e7, // number of keys to track frequency of (10 M).
 		MaxCost:     1024 * 1024 * numMiB,
 		BufferItems: 64, // number of keys per Get buffer.
@@ -69,12 +76,8 @@ func NewCacheFactory(numMiB int64, logger *slog.Logger) (func(ttl time.Duration)
 }
 
 // newCache caches all successful requests (status code < 400) for the given duration
-func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Adapter {
-	type cacheElement struct {
-		buffer     []byte
-		header     http.Header
-		statusCode int
-	}
+func newCache(ttl time.Duration, cache *ristretto.Cache[string, responseItem], logger *slog.Logger) Adapter {
+
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// extract body
@@ -97,11 +100,8 @@ func newCache(ttl time.Duration, cache *ristretto.Cache, logger *slog.Logger) Ad
 			cacheKey := buildKey(r.URL.Path+"|"+r.URL.RawQuery, body)
 
 			// try to get request from cache
-			value, found := cache.Get(cacheKey)
-			var response cacheElement
-			if found {
-				response = value.(cacheElement)
-			} else {
+			response, found := cache.Get(cacheKey)
+			if !found {
 				// record the writes of the next handler, so the response can be saved in the cache.
 				recorder := httptest.NewRecorder()
 				// call next handler
