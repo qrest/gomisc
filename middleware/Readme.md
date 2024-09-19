@@ -25,7 +25,8 @@ func someHandler() http.Handler {
 
 func main() {
 	mux := http.NewServeMux()
-	cacheFactory, err := mw.NewCacheFactory(nil)
+	// create a cache with a size of 50 MiB 
+	cacheFactory, err := mw.NewCacheFactory(50, nil)
 	if err != nil {
 		// handle error
 	}
