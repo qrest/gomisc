@@ -1,6 +1,6 @@
 module github.com/qrest/gomisc
 
-go 1.22.4
+go 1.23.0
 
 require (
 	github.com/dgraph-io/ristretto v1.0.0
