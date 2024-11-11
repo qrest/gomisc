@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/qrest/gomisc/serror"
 	"io"
 	"log/slog"
