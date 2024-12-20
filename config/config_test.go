@@ -58,22 +58,3 @@ func TestSetConfigFlags(t *testing.T) {
 		flag.Parse()
 	})
 }
-
-func TestGetLogfile(t *testing.T) {
-	// this should not work
-	logfile, err := GetLogfile("")
-	require.Error(t, err)
-	require.Nil(t, logfile)
-
-	// this should work
-
-	// create temp file and close it immediately
-	file, err := os.CreateTemp("", "go_test_logfile")
-	require.NoError(t, err)
-	fName := file.Name()
-	require.NoError(t, file.Close())
-
-	logfile, err = GetLogfile(fName)
-	require.NoError(t, err)
-	require.NotNil(t, logfile)
-}

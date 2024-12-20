@@ -55,19 +55,3 @@ func SetConfigFlags(defaultConfigName string, filePath *string, createConfigFile
 	flag.BoolVar(createConfigFile, "createConfig", false,
 		"creates a default config file '"+defaultConfigName+"' (default: false)")
 }
-
-// GetLogfile returns a file accessor for fileName
-func GetLogfile(fileName string) (f *os.File, err error) {
-	if len(fileName) == 0 {
-		err = serror.FromStr("name for log file is invalid")
-		return
-	}
-
-	f, err = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		err = serror.New(err)
-		return
-	}
-
-	return
-}
