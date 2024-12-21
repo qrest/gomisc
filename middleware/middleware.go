@@ -5,7 +5,6 @@ import (
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/qrest/gomisc/serror"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -62,7 +61,7 @@ func buildKey(requestURI string, body []byte) string {
 }
 
 // NewCacheFactory returns a middleware factory. Call the factory for each route, so they share the same internal cache.
-func NewCacheFactory(numMiB int64, logger *slog.Logger) (func(ttl time.Duration) Adapter, error) {
+func NewCacheFactory(numMiB int64, errorCallback func(error)) (func(ttl time.Duration) Adapter, error) {
 	cache, err := ristretto.NewCache[string, responseItem](&ristretto.Config[string, responseItem]{
 		NumCounters: 1e7, // number of keys to track frequency of (10 M).
 		MaxCost:     1024 * 1024 * numMiB,
@@ -72,11 +71,12 @@ func NewCacheFactory(numMiB int64, logger *slog.Logger) (func(ttl time.Duration)
 		return nil, serror.New(err)
 	}
 
-	return func(ttl time.Duration) Adapter { return newCache(ttl, cache, logger) }, nil
+	return func(ttl time.Duration) Adapter { return newCache(ttl, cache, errorCallback) }, nil
 }
 
-// newCache caches all successful requests (status code < 400) for the given duration
-func newCache(ttl time.Duration, cache *ristretto.Cache[string, responseItem], logger *slog.Logger) Adapter {
+// newCache caches all successful requests (status code < 400) for the given duration.
+// If errorCallback is set, it is called when an error occurs
+func newCache(ttl time.Duration, cache *ristretto.Cache[string, responseItem], errorCallback func(error)) Adapter {
 
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -87,8 +87,8 @@ func newCache(ttl time.Duration, cache *ristretto.Cache[string, responseItem], l
 				body, err = io.ReadAll(r.Body)
 				if err != nil {
 					http.Error(w, "an error occurred", http.StatusInternalServerError)
-					if logger != nil {
-						logger.Error(err.Error())
+					if errorCallback != nil {
+						errorCallback(err)
 					}
 
 					return
@@ -135,8 +135,8 @@ func newCache(ttl time.Duration, cache *ristretto.Cache[string, responseItem], l
 			w.WriteHeader(response.statusCode)
 
 			if _, err := w.Write(response.buffer); err != nil {
-				if logger != nil {
-					logger.Error(err.Error())
+				if errorCallback != nil {
+					errorCallback(err)
 				}
 			}
 		})
