@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
+	"github.com/goccy/go-yaml"
 	"github.com/qrest/gomisc/serror"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 )
@@ -23,9 +23,7 @@ func ReadConfig(configFilePath string, config interface{}) error {
 	}(file)
 
 	// Init new YAML decode
-	d := yaml.NewDecoder(file)
-
-	d.KnownFields(true)
+	d := yaml.NewDecoder(file, yaml.Strict())
 
 	// Start YAML decoding from file
 	if err := d.Decode(config); err != nil {
